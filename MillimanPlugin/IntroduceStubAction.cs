@@ -26,14 +26,14 @@ namespace MillimanPlugin
     public class CreateLocalVarFromUsageFix : BulbItemImpl, IQuickFix
     {
         // Fields
-        private readonly IReference myReference;
-        private readonly IReferenceExpression myReferenceExpression;
+        private readonly IReference _myReference;
+        private readonly IReferenceExpression _myReferenceExpression;
 
         // Methods
         public CreateLocalVarFromUsageFix(NotResolvedError error)
         {
-            myReference = error.Reference;
-            myReferenceExpression = (myReference == null) ? null : (myReference.GetElement() as IReferenceExpression);
+            _myReference = error.Reference;
+            _myReferenceExpression = (_myReference == null) ? null : (_myReference.GetElement() as IReferenceExpression);
         }
 
         private bool InsideConstantExpression
@@ -43,12 +43,12 @@ namespace MillimanPlugin
 
         private IReference Reference
         {
-            get { return myReference; }
+            get { return _myReference; }
         }
 
         private IReferenceExpression ReferenceExpression
         {
-            get { return myReferenceExpression; }
+            get { return _myReferenceExpression; }
         }
 
         public override string Text
@@ -60,10 +60,10 @@ namespace MillimanPlugin
 
         public bool IsAvailable(IUserDataHolder cache)
         {
-            if (InvocationExpressionNavigator.GetByInvokedExpression(myReferenceExpression) != null)
+            if (InvocationExpressionNavigator.GetByInvokedExpression(_myReferenceExpression) != null)
                 return false;
             
-            if (myReferenceExpression == null)
+            if (_myReferenceExpression == null)
                 return false;
             
             var type = Reference.CheckResolveResult();
@@ -89,7 +89,7 @@ namespace MillimanPlugin
                 ReferencesCollectingUtil.CollectElementsWithUnresolvedReference(
                     scope,
                     ReferenceExpression.Reference.GetName(),
-                    (IReferenceExpression expression) => expression.Reference));
+                    (IReferenceExpression expression) => expression.Reference).Cast<ICSharpExpression>());
         }
 
         protected override Action<ITextControl> ExecuteTransaction(ISolution solution, IProgressIndicator progress)
@@ -99,7 +99,7 @@ namespace MillimanPlugin
             var typeConstraint = VariableTypeConstraint(anchor);
             var elements = CollectUsages(anchor);
             var statementToBeVisibleFromAll = ExpressionUtil.GetStatementToBeVisibleFromAll(elements);
-            var declarationStatement = GetDeclarationStatement(statementToBeVisibleFromAll, instance, elements, typeConstraint);
+            var declarationStatement = GetDeclarationStatement(statementToBeVisibleFromAll, instance, typeConstraint);
             declarationStatement.LanguageService.CodeFormatter.Format(declarationStatement.ToTreeNode(),
                                                                       CodeFormatProfile.GENERATOR);
             return control => CSharpTemplateUtil.ExecuteTemplate(
@@ -111,38 +111,48 @@ namespace MillimanPlugin
                 new TextRange(declarationStatement.VariableDeclarations[0].GetNameDocumentRange().TextRange.EndOffset));
         }
 
-        private static IList<ICSharpExpression> FilterUsages(IEnumerable<IReferenceExpression> expressions)
+        private static IList<ICSharpExpression> FilterUsages(IEnumerable<ICSharpExpression> expressions)
         {
-            var list = new List<ICSharpExpression>();
-            foreach (var expression in expressions)
-                if (InvocationExpressionNavigator.GetByInvokedExpression(expression) == null)
-                    list.Add(expression);
-            return list;
+            return expressions.Where(IsNotInvocationExpression).ToList();
+        }
+
+        private static bool IsNotInvocationExpression(ICSharpExpression expression)
+        {
+            return InvocationExpressionNavigator.GetByInvokedExpression(expression) == null;
         }
 
         private IBlock GetAnchor()
         {
-            IList<ICSharpExpression> list = null;
-            IBlock block = null;
-            for (var block2 = ReferenceExpression.GetContainingElement<IBlock>(false);
-                 block2 != null;
-                 block2 = block2.GetContainingElement<IBlock>(false))
+            IList<ICSharpExpression> usages = null;
+            IBlock anchor = null;
+            for (var block = ReferenceExpression.GetContainingElement<IBlock>(false);
+                 block != null;
+                 block = block.GetContainingElement<IBlock>(false))
             {
-                if (SwitchStatementNavigator.GetByBlock(block2) == null)
-                {
-                    IList<ICSharpExpression> list2 = CollectUsages(block2);
-                    if ((list == null) || (list.Count < list2.Count))
-                    {
-                        list = list2;
-                        block = block2;
-                    }
-                }
+                if (IsSwitchStatement(block)) 
+                    continue;
+
+                var outerUsages = CollectUsages(block);
+                if (HasLessUsagesThanInnerBlock(usages, outerUsages)) 
+                    continue;
+
+                usages = outerUsages;
+                anchor = block;
             }
-            return block;
+            return anchor;
         }
 
-        private IDeclarationStatement GetDeclarationStatement(IStatement anchor, CSharpElementFactory factory,
-                                                              IList<ICSharpExpression> usages, IExpectedTypeConstraint typeConstraint)
+        private static bool HasLessUsagesThanInnerBlock(ICollection<ICSharpExpression> usages, ICollection<ICSharpExpression> outerUsages)
+        {
+            return (usages != null) && (usages.Count >= outerUsages.Count);
+        }
+
+        private static bool IsSwitchStatement(IBlock block)
+        {
+            return SwitchStatementNavigator.GetByBlock(block) != null;
+        }
+
+        private IDeclarationStatement GetDeclarationStatement(IStatement anchor, CSharpElementFactory factory, IExpectedTypeConstraint typeConstraint)
         {
             try
             {
@@ -163,19 +173,19 @@ namespace MillimanPlugin
 
         private string GetText(string entityString, bool useContext)
         {
-            string name = Reference.GetName();
+            var name = Reference.GetName();
             if (useContext)
             {
-                IReference reference = myReference;
+                var reference = _myReference;
                 if ((reference != null) && IsQualified(reference.GetAccessContext()))
                 {
-                    ITypeElement qualifierTypeElement = reference.GetAccessContext().GetQualifierTypeElement();
+                    var qualifierTypeElement = reference.GetAccessContext().GetQualifierTypeElement();
                     if (qualifierTypeElement != null)
                     {
-                        name =
-                            DeclaredElementPresenter.Format(reference.GetElement().Language,
-                                                            DeclaredElementPresenter.NAME_PRESENTER,
-                                                            qualifierTypeElement) + "." + name;
+                        name = DeclaredElementPresenter.Format(
+                            reference.GetElement().Language,
+                            DeclaredElementPresenter.NAME_PRESENTER,
+                            qualifierTypeElement) + "." + name;
                     }
                 }
             }
