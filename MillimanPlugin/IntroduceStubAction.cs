@@ -22,7 +22,7 @@ using JetBrains.Util;
 
 namespace MillimanPlugin
 {
-    [QuickFix]
+    [QuickFix(0x7FFF)]
     public class CreateLocalVarFromUsageFix : BulbItemImpl, IQuickFix
     {
         // Fields
