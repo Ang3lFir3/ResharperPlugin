@@ -34,61 +34,80 @@
   <ItemGroup>
     <Reference Include="JetBrains.Platform.ReSharper.ActionManagement">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.Platform.ReSharper.ActionManagement.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.Platform.ReSharper.DocumentManager">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.Platform.ReSharper.DocumentManager.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.Platform.ReSharper.DocumentModel">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.Platform.ReSharper.DocumentModel.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.Platform.ReSharper.IDE">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.Platform.ReSharper.IDE.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.Platform.ReSharper.ProjectModel">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.Platform.ReSharper.ProjectModel.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.Platform.ReSharper.Shell">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.Platform.ReSharper.Shell.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.Platform.ReSharper.TextControl">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.Platform.ReSharper.TextControl.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.Platform.ReSharper.UI">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.Platform.ReSharper.UI.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.Platform.ReSharper.Util">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.Platform.ReSharper.Util.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.Daemon">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Daemon.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.Daemon.CSharp, Version=5.1.1753.4, Culture=neutral, PublicKeyToken=1010a0d8d6380325, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Daemon.CSharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.Feature.Services">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Feature.Services.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.Features.InplaceRefactorings">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Features.InplaceRefactorings.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.Intentions">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Intentions.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.Intentions.CSharp">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Intentions.CSharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.NewRefactorings">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.NewRefactorings.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.Psi">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Psi.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.Psi.CSharp">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Psi.CSharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="JetBrains.ReSharper.Psi.Services">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Psi.Services.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
