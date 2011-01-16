@@ -81,6 +81,13 @@
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Feature.Services.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="JetBrains.ReSharper.Feature.Services.CSharp">
+      <HintPath>..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Feature.Services.CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="JetBrains.ReSharper.Features.Common">
+      <HintPath>..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Features.Common.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="JetBrains.ReSharper.Features.InplaceRefactorings">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Features.InplaceRefactorings.dll</HintPath>
       <Private>False</Private>
@@ -111,10 +118,20 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddDependencyAction.cs" />
+    <Compile Include="AddDependencyConflictSearcher.cs" />
+    <Compile Include="AddDependencyModel.cs" />
+    <Compile Include="AddDependencyPage.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="AddDependencyProvider.cs" />
+    <Compile Include="AddDependencyRefactoringWorkflow.cs" />
     <Compile Include="CreateStubFromUsageFix.cs" />
+    <Compile Include="IAddDependencyWorkflowProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
