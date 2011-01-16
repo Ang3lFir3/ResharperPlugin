@@ -24,12 +24,10 @@ namespace MillimanPlugin
     [QuickFix(0x7FFF)]
     public class CreateStubFromUsageFix : BulbItemImpl, IQuickFix
     {
-        // Fields
         private readonly IReference _myReference;
         private readonly IReferenceExpression _myReferenceExpression;
         private readonly IBlock _anchor;
 
-        // Methods
         public CreateStubFromUsageFix(NotResolvedError error)
         {
             _myReference = error.Reference;
@@ -41,8 +39,6 @@ namespace MillimanPlugin
         {
             get { return string.Format("Create RhinoMocks stub '{0}'", _myReference.GetName()); }
         }
-
-        #region IQuickFix Members
 
         public bool IsAvailable(IUserDataHolder cache)
         {
@@ -59,29 +55,49 @@ namespace MillimanPlugin
             get { return new[] { this }; }
         }
 
-        #endregion
-
         protected override Action<ITextControl> ExecuteTransaction(ISolution solution, IProgressIndicator progress)
         {
-            var instance = CSharpElementFactory.GetInstance(_myReferenceExpression.GetPsiModule());
             var usages = CollectUsages(_anchor);
-            var typeConstraint = ExpectedTypesUtil.GuessTypes(usages.ConvertList<ICSharpExpression, IExpression>());
-            var statementToBeVisibleFromAll = ExpressionUtil.GetStatementToBeVisibleFromAll(usages);
-            var declarationStatement = GetDeclarationStatement(statementToBeVisibleFromAll, instance, typeConstraint);
-            declarationStatement.LanguageService.CodeFormatter.Format(declarationStatement.ToTreeNode(),
-                                                                      CodeFormatProfile.GENERATOR);
+            var typeConstraint = GuessTypesForUsages(usages);
+            
+            var declarationStatement = GetDeclarationStatement(
+                usages, 
+                typeConstraint);
+            
+            FormatCode(declarationStatement);
+
+            var localVariableDeclaration = declarationStatement.VariableDeclarations[0];
+            var typeUsage = localVariableDeclaration.ToTreeNode().TypeUsage;
+            var selectionStartOffset = localVariableDeclaration.GetNameDocumentRange().TextRange.EndOffset;
+            var selectionRange = new TextRange(selectionStartOffset);
+            
             return control => CSharpTemplateUtil.ExecuteTemplate(
                 solution,
                 control,
                 typeConstraint,
-                declarationStatement.VariableDeclarations[0].ToTreeNode().TypeUsage,
+                typeUsage,
                 true,
-                new TextRange(declarationStatement.VariableDeclarations[0].GetNameDocumentRange().TextRange.EndOffset));
+                selectionRange);
+        }
+
+        private static IExpectedTypeConstraint GuessTypesForUsages(IList<ICSharpExpression> usages)
+        {
+            return ExpectedTypesUtil.GuessTypes(
+                usages.ConvertList<ICSharpExpression, IExpression>());
+        }
+
+        private static void FormatCode(IDeclarationStatement declarationStatement)
+        {
+            declarationStatement.LanguageService.CodeFormatter.Format(
+                declarationStatement.ToTreeNode(),
+                CodeFormatProfile.GENERATOR);
         }
 
         private IReferenceExpression GetReferenceExpression()
         {
-            return _myReference == null ? null : (_myReference.GetElement() as IReferenceExpression);
+            return _myReference != null 
+                ? _myReference.GetElement() as IReferenceExpression 
+                : null;
         }
 
         private bool IsUnresolvedOrWrongNameCase()
@@ -110,8 +126,9 @@ namespace MillimanPlugin
 
         private IList<ICSharpExpression> CollectUsages(IElement scope)
         {
-            var referenceName = _myReferenceExpression.Reference.GetName();
-            var elementsWithUnresolvedReferences = CollectElementsWithUnresolvedReferences(scope, referenceName);
+            var elementsWithUnresolvedReferences = CollectElementsWithUnresolvedReferences(
+                scope, 
+                _myReference.GetName());
 
             return FilterUsages(elementsWithUnresolvedReferences.Cast<ICSharpExpression>());
         }
@@ -135,23 +152,28 @@ namespace MillimanPlugin
             return InvocationExpressionNavigator.GetByInvokedExpression(expression) != null;
         }
 
-        private IDeclarationStatement GetDeclarationStatement(IStatement statementToBeVisibleToAll, CSharpElementFactory factory, IExpectedTypeConstraint typeConstraint)
+        private IDeclarationStatement GetDeclarationStatement(IEnumerable<ICSharpExpression> usages, IExpectedTypeConstraint typeConstraint)
         {
             try
             {
-                var statement = (IDeclarationStatement)factory.CreateStatement(
-                    "var $0 = MockRepository.GenerateStub<$1>();",
-                    _myReference.GetName(),
-                    GetStubInterfaceName(typeConstraint));
-                return statement == null 
-                    ? null 
-                    : StatementUtil.InsertStatement(statement, ref statementToBeVisibleToAll, true);
+                var factory = CSharpElementFactory.GetInstance(_myReferenceExpression.GetPsiModule());
+                var insertionLocation = ExpressionUtil.GetStatementToBeVisibleFromAll(usages);
+                var statement = CreateStubDeclaration(factory, typeConstraint);
+                return StatementUtil.InsertStatement(statement, ref insertionLocation, true);
             }
             catch (Exception ex)
             {
                 File.AppendAllText("c:\\temp\\MillimanPluginErrors.txt", "Exception on " + DateTime.Now + "\n" + ex + "\n\n");
                 throw;
             }
+        }
+
+        private IDeclarationStatement CreateStubDeclaration(CSharpElementFactory factory, IExpectedTypeConstraint typeConstraint)
+        {
+            return (IDeclarationStatement)factory.CreateStatement(
+                "var $0 = MockRepository.GenerateStub<$1>();",
+                _myReference.GetName(),
+                GetStubInterfaceName(typeConstraint));
         }
 
         private string GetStubInterfaceName(IExpectedTypeConstraint typeConstraint)
