@@ -8,8 +8,8 @@
     <ProjectGuid>{33CA14F8-3722-4C08-85A3-16CA1D714EF5}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MillimanPlugin</RootNamespace>
-    <AssemblyName>MillimanPlugin</AssemblyName>
+    <RootNamespace>ResharperPlugin</RootNamespace>
+    <AssemblyName>ResharperPlugin</AssemblyName>
     <TargetFrameworkVersion>v3.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

@@ -19,7 +19,7 @@ using JetBrains.ReSharper.Psi.Tree;
 using JetBrains.TextControl;
 using JetBrains.Util;
 
-namespace MillimanPlugin
+namespace ResharperPlugin
 {
     [QuickFix(0x7FFF)]
     public class CreateStubFromUsageFix : BulbItemImpl, IQuickFix
