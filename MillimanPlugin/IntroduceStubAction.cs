@@ -8,7 +8,6 @@ using JetBrains.ReSharper.Daemon.CSharp.Stages;
 using JetBrains.ReSharper.Feature.Services.Bulbs;
 using JetBrains.ReSharper.Intentions;
 using JetBrains.ReSharper.Intentions.CSharp.Util;
-using JetBrains.ReSharper.Psi;
 using JetBrains.ReSharper.Psi.CodeStyle;
 using JetBrains.ReSharper.Psi.CSharp;
 using JetBrains.ReSharper.Psi.CSharp.Tree;
@@ -23,82 +22,51 @@ using JetBrains.Util;
 namespace MillimanPlugin
 {
     [QuickFix(0x7FFF)]
-    public class CreateLocalVarFromUsageFix : BulbItemImpl, IQuickFix
+    public class CreateStubFromUsageFix : BulbItemImpl, IQuickFix
     {
         // Fields
         private readonly IReference _myReference;
         private readonly IReferenceExpression _myReferenceExpression;
+        private readonly IBlock _anchor;
 
         // Methods
-        public CreateLocalVarFromUsageFix(NotResolvedError error)
+        public CreateStubFromUsageFix(NotResolvedError error)
         {
             _myReference = error.Reference;
-            _myReferenceExpression = (_myReference == null) ? null : (_myReference.GetElement() as IReferenceExpression);
-        }
-
-        private bool InsideConstantExpression
-        {
-            get { return (ReferenceExpression.GetContainingElement<IGotoCaseStatement>(false) != null); }
-        }
-
-        private IReference Reference
-        {
-            get { return _myReference; }
-        }
-
-        private IReferenceExpression ReferenceExpression
-        {
-            get { return _myReferenceExpression; }
+            _myReferenceExpression = GetReferenceExpression();
+            _anchor = ContainingElement<IBlock>();
         }
 
         public override string Text
         {
-            get { return GetText("RhinoMocks stub", false); }
+            get { return string.Format("Create RhinoMocks stub '{0}'", _myReference.GetName()); }
         }
 
         #region IQuickFix Members
 
         public bool IsAvailable(IUserDataHolder cache)
         {
-            if (InvocationExpressionNavigator.GetByInvokedExpression(_myReferenceExpression) != null)
-                return false;
-            
-            if (_myReferenceExpression == null)
-                return false;
-            
-            var type = Reference.CheckResolveResult();
-            if ((type != ResolveErrorType.NOT_RESOLVED) && (type != ResolveErrorType.WRONG_NAME_CASE))
-                return false;
-
-            if (InsideConstantExpression)
-                return false;
-            
-            return ((ReferenceExpression.QualifierExpression == null) && (GetAnchor() != null));
+            return _myReferenceExpression != null 
+                && _anchor != null
+                && !IsInvocationExpression(_myReferenceExpression) 
+                && !InsideConstantExpression 
+                && IsUnqualifiedExpression 
+                && IsUnresolvedOrWrongNameCase();
         }
 
-        public new IBulbItem[] Items
+        public override IBulbItem[] Items
         {
-            get { return new[] {this}; }
+            get { return new[] { this }; }
         }
 
         #endregion
 
-        private IList<ICSharpExpression> CollectUsages(IElement scope)
-        {
-            return FilterUsages(
-                ReferencesCollectingUtil.CollectElementsWithUnresolvedReference(
-                    scope,
-                    ReferenceExpression.Reference.GetName(),
-                    (IReferenceExpression expression) => expression.Reference).Cast<ICSharpExpression>());
-        }
-
         protected override Action<ITextControl> ExecuteTransaction(ISolution solution, IProgressIndicator progress)
         {
-            var instance = CSharpElementFactory.GetInstance(ReferenceExpression.GetPsiModule());
-            var anchor = GetAnchor();
-            var typeConstraint = VariableTypeConstraint(anchor);
-            var elements = CollectUsages(anchor);
-            var statementToBeVisibleFromAll = ExpressionUtil.GetStatementToBeVisibleFromAll(elements);
+            var instance = CSharpElementFactory.GetInstance(_myReferenceExpression.GetPsiModule());
+            var usages = CollectUsages(_anchor);
+            var typeConstraint = ExpectedTypesUtil.GuessTypes(usages.ConvertList<ICSharpExpression, IExpression>());
+            var statementToBeVisibleFromAll = ExpressionUtil.GetStatementToBeVisibleFromAll(usages);
             var declarationStatement = GetDeclarationStatement(statementToBeVisibleFromAll, instance, typeConstraint);
             declarationStatement.LanguageService.CodeFormatter.Format(declarationStatement.ToTreeNode(),
                                                                       CodeFormatProfile.GENERATOR);
@@ -106,100 +74,91 @@ namespace MillimanPlugin
                 solution,
                 control,
                 typeConstraint,
-                declarationStatement.VariableDeclarations[0].ToTreeNode().TypeUsage, 
+                declarationStatement.VariableDeclarations[0].ToTreeNode().TypeUsage,
                 true,
                 new TextRange(declarationStatement.VariableDeclarations[0].GetNameDocumentRange().TextRange.EndOffset));
         }
 
+        private IReferenceExpression GetReferenceExpression()
+        {
+            return _myReference == null ? null : (_myReference.GetElement() as IReferenceExpression);
+        }
+
+        private bool IsUnresolvedOrWrongNameCase()
+        {
+            var type = _myReference.CheckResolveResult();
+            return type == ResolveErrorType.NOT_RESOLVED
+                || type == ResolveErrorType.WRONG_NAME_CASE;
+        }
+
+        private T ContainingElement<T>() where T : class, IElement
+        {
+            return _myReferenceExpression != null
+                ? _myReferenceExpression.GetContainingElement<T>(false)
+                : null;
+        }
+
+        private bool InsideConstantExpression
+        {
+            get { return ContainingElement<IGotoCaseStatement>() != null; }
+        }
+
+        private bool IsUnqualifiedExpression
+        {
+            get { return (_myReferenceExpression.QualifierExpression == null); }
+        }
+
+        private IList<ICSharpExpression> CollectUsages(IElement scope)
+        {
+            var referenceName = _myReferenceExpression.Reference.GetName();
+            var elementsWithUnresolvedReferences = CollectElementsWithUnresolvedReferences(scope, referenceName);
+
+            return FilterUsages(elementsWithUnresolvedReferences.Cast<ICSharpExpression>());
+        }
+
+        private static IEnumerable<IReferenceExpression> CollectElementsWithUnresolvedReferences(IElement scope, string referenceName)
+        {
+            return ReferencesCollectingUtil
+                .CollectElementsWithUnresolvedReference<IReferenceExpression>(
+                    scope,
+                    referenceName,
+                    x => x.Reference);
+        }
+
         private static IList<ICSharpExpression> FilterUsages(IEnumerable<ICSharpExpression> expressions)
         {
-            return expressions.Where(IsNotInvocationExpression).ToList();
+            return expressions.Where(x => !IsInvocationExpression(x)).ToList();
         }
 
-        private static bool IsNotInvocationExpression(ICSharpExpression expression)
+        private static bool IsInvocationExpression(ICSharpExpression expression)
         {
-            return InvocationExpressionNavigator.GetByInvokedExpression(expression) == null;
+            return InvocationExpressionNavigator.GetByInvokedExpression(expression) != null;
         }
 
-        private IBlock GetAnchor()
-        {
-            IList<ICSharpExpression> usages = null;
-            IBlock anchor = null;
-            for (var block = ReferenceExpression.GetContainingElement<IBlock>(false);
-                 block != null;
-                 block = block.GetContainingElement<IBlock>(false))
-            {
-                if (IsSwitchStatement(block)) 
-                    continue;
-
-                var outerUsages = CollectUsages(block);
-                if (HasLessUsagesThanInnerBlock(usages, outerUsages)) 
-                    continue;
-
-                usages = outerUsages;
-                anchor = block;
-            }
-            return anchor;
-        }
-
-        private static bool HasLessUsagesThanInnerBlock(ICollection<ICSharpExpression> usages, ICollection<ICSharpExpression> outerUsages)
-        {
-            return (usages != null) && (usages.Count >= outerUsages.Count);
-        }
-
-        private static bool IsSwitchStatement(IBlock block)
-        {
-            return SwitchStatementNavigator.GetByBlock(block) != null;
-        }
-
-        private IDeclarationStatement GetDeclarationStatement(IStatement anchor, CSharpElementFactory factory, IExpectedTypeConstraint typeConstraint)
+        private IDeclarationStatement GetDeclarationStatement(IStatement statementToBeVisibleToAll, CSharpElementFactory factory, IExpectedTypeConstraint typeConstraint)
         {
             try
             {
                 var statement = (IDeclarationStatement)factory.CreateStatement(
                     "var $0 = MockRepository.GenerateStub<$1>();",
-                    Reference.GetName(),
-                    typeConstraint.GetDefaultTypes().First().GetPresentableName(anchor.Language));
-                if (statement == null)
-                    throw new InvalidOperationException("Not expected to be possible!");
-                return StatementUtil.InsertStatement(statement, ref anchor, true);
+                    _myReference.GetName(),
+                    GetStubInterfaceName(typeConstraint));
+                return statement == null 
+                    ? null 
+                    : StatementUtil.InsertStatement(statement, ref statementToBeVisibleToAll, true);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 File.AppendAllText("c:\\temp\\MillimanPluginErrors.txt", "Exception on " + DateTime.Now + "\n" + ex + "\n\n");
                 throw;
             }
         }
 
-        private string GetText(string entityString, bool useContext)
+        private string GetStubInterfaceName(IExpectedTypeConstraint typeConstraint)
         {
-            var name = Reference.GetName();
-            if (useContext)
-            {
-                var reference = _myReference;
-                if ((reference != null) && IsQualified(reference.GetAccessContext()))
-                {
-                    var qualifierTypeElement = reference.GetAccessContext().GetQualifierTypeElement();
-                    if (qualifierTypeElement != null)
-                    {
-                        name = DeclaredElementPresenter.Format(
-                            reference.GetElement().Language,
-                            DeclaredElementPresenter.NAME_PRESENTER,
-                            qualifierTypeElement) + "." + name;
-                    }
-                }
-            }
-            return string.Format("Create {0} '{1}'", entityString, name);
-        }
-
-        private static bool IsQualified(IAccessContext context)
-        {
-            return context.GetQualifierKind() != QualifierKind.NONE;
-        }
-
-        private IExpectedTypeConstraint VariableTypeConstraint(IElement scope)
-        {
-            return ExpectedTypesUtil.GuessTypes(CollectUsages(scope).ConvertList<ICSharpExpression, IExpression>());
+            var languageType = _anchor.Language;
+            var firstInterfaceType = typeConstraint.GetDefaultTypes().First();
+            return firstInterfaceType.GetPresentableName(languageType);
         }
     }
 }
