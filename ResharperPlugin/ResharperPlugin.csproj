@@ -116,6 +116,9 @@
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Psi.Services.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="JetBrains.ReSharper.Refactorings.CSharp">
+      <HintPath>..\..\..\Program Files (x86)\JetBrains\ReSharper\v5.1\Bin\JetBrains.ReSharper.Refactorings.CSharp.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Windows.Forms" />
