@@ -5,6 +5,7 @@ using JetBrains.Application.Progress;
 using JetBrains.CommonControls.Validation;
 using JetBrains.DataFlow;
 using JetBrains.ProjectModel;
+using JetBrains.ReSharper.Feature.Services.CSharp.Util;
 using JetBrains.ReSharper.Features.Common.GoToByName;
 using JetBrains.ReSharper.Features.Common.UI;
 using JetBrains.ReSharper.Psi;
@@ -17,15 +18,14 @@ namespace ResharperPlugin
 {
     public class AddDependencyPage: SafeUserControl, IValidatorProvider, IRefactoringPage
     {
-        private readonly AddDependencyModel _model;
         private readonly ISolution _solution;
         private readonly IProperty<Boolean> _continueEnabled;
 
         private readonly CompletionPickerEdit _typeEditBox;
+        private readonly CSharpTypeValidator _typeValidator;
 
-        public AddDependencyPage(AddDependencyModel model, ISolution solution)
+        public AddDependencyPage(Action<string> updateParameterType, ISolution solution)
         {
-            _model = model;
             _solution = solution;
             _continueEnabled = new Property<bool>("ContinueEnabled", true);
 
@@ -37,11 +37,12 @@ namespace ResharperPlugin
             _typeEditBox.Text.Change.Advise_HasNew(
                 args =>
                 {
-                    _model.NewParameterType = args.New;
+                    updateParameterType(args.New);
                     UpdateUI();
                 });
 
             Controls.Add(_typeEditBox);
+            _typeValidator = new CSharpTypeValidator();
         }
 
         private void UpdateUI()
@@ -68,7 +69,7 @@ namespace ResharperPlugin
                                _typeEditBox, 
                                ValidatorSeverity.Error, 
                                "Dependency type is not valid", 
-                               _model.IsValidReturnType)
+                               returnTypeText => _typeValidator.IsValidReturnType(returnTypeText))
                        };
             }
         }
@@ -89,7 +90,7 @@ namespace ResharperPlugin
         {
             pi.Start(1);
             pi.Stop();
-            return _model.IsValid;
+            return true;
         }
 
         public IProperty<bool> ContinueEnabled

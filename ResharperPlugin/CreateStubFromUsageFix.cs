@@ -7,7 +7,6 @@ using JetBrains.ProjectModel;
 using JetBrains.ReSharper.Daemon.CSharp.Stages;
 using JetBrains.ReSharper.Feature.Services.Bulbs;
 using JetBrains.ReSharper.Intentions;
-using JetBrains.ReSharper.Intentions.CSharp.Util;
 using JetBrains.ReSharper.Psi.CodeStyle;
 using JetBrains.ReSharper.Psi.CSharp;
 using JetBrains.ReSharper.Psi.CSharp.Tree;
@@ -66,18 +65,7 @@ namespace ResharperPlugin
             
             FormatCode(declarationStatement);
 
-            var localVariableDeclaration = declarationStatement.VariableDeclarations[0];
-            var typeUsage = localVariableDeclaration.ToTreeNode().TypeUsage;
-            var selectionStartOffset = localVariableDeclaration.GetNameDocumentRange().TextRange.EndOffset;
-            var selectionRange = new TextRange(selectionStartOffset);
-            
-            return control => CSharpTemplateUtil.ExecuteTemplate(
-                solution,
-                control,
-                typeConstraint,
-                typeUsage,
-                true,
-                selectionRange);
+            return tc => { };
         }
 
         private static IExpectedTypeConstraint GuessTypesForUsages(IList<ICSharpExpression> usages)

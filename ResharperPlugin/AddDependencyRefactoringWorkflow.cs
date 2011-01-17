@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using JetBrains.ActionManagement;
 using JetBrains.Application.Progress;
@@ -8,7 +7,6 @@ using JetBrains.ReSharper.Psi;
 using JetBrains.ReSharper.Psi.CodeStyle;
 using JetBrains.ReSharper.Psi.CSharp;
 using JetBrains.ReSharper.Psi.CSharp.Tree;
-using JetBrains.ReSharper.Psi.CSharp.Util;
 using JetBrains.ReSharper.Psi.ExtensionsAPI.Tree;
 using JetBrains.ReSharper.Psi.Naming;
 using JetBrains.ReSharper.Psi.Naming.Extentions;
@@ -16,9 +14,7 @@ using JetBrains.ReSharper.Psi.Naming.Settings;
 using JetBrains.ReSharper.Psi.Resolve;
 using JetBrains.ReSharper.Psi.Search;
 using JetBrains.ReSharper.Psi.Tree;
-using JetBrains.ReSharper.Refactorings.ChangeSignature;
 using JetBrains.ReSharper.Refactorings.Conflicts;
-using JetBrains.ReSharper.Refactorings.CSharp.ChangeSignature;
 using JetBrains.ReSharper.Refactorings.Workflow;
 using JetBrains.TextControl;
 using DataConstants = JetBrains.ReSharper.Psi.Services.DataConstants;
@@ -27,11 +23,11 @@ namespace ResharperPlugin
 {
     public class AddDependencyRefactoringWorkflow: IRefactoringWorkflow
     {
-        private AddDependencyModel _model;
         private AddDependencyPage _page;
         private IDeclaredElementPointer<ITypeElement> _class;
         private IDeclaredElementPointer<IConstructor> _ctor;
         private ISolution _solution;
+        private string _parameterType;
 
         public bool Execute(IProgressIndicator progressIndicator)
         {
@@ -41,25 +37,44 @@ namespace ResharperPlugin
             var definingClass = _class.FindDeclaredElement();
             if (definingClass == null)
                 return false;
+            if (ctor.Module == null)
+                return false;
             var factory = CSharpElementFactory.GetInstance(ctor.Module);
             var ctorDecl = ctor.GetDeclarations().FirstOrDefault();
             if (ctorDecl == null)
             {
                 var typeDecl = definingClass.GetDeclarations().First() as IClassLikeDeclarationNode;
+                if (typeDecl == null)
+                    return false;
                 var typeBody = typeDecl.Body;
                 ctorDecl = factory.CreateTypeMemberDeclaration("public $0() {}", typeDecl.DeclaredName);
-                ctorDecl = ModificationUtil.AddChildBefore(typeBody, typeBody.FirstChild.NextSibling, ctorDecl.ToTreeNode()).GetContainingElement<IConstructorDeclaration>(true);
+                if (typeBody.FirstChild == null)
+                    return false;
+                if (ctorDecl == null)
+                    return false;
+
+                ctorDecl = ModificationUtil.AddChildBefore(
+                    typeBody, 
+                    typeBody.FirstChild.NextSibling, 
+                    ctorDecl.ToTreeNode()).GetContainingElement<IConstructorDeclaration>(true);
             }
-            var type = CSharpTypeFactory.CreateType(_model.NewParameterType, ctorDecl.ToTreeNode());
+            if (ctorDecl == null)
+                return false;
+            var type = CSharpTypeFactory.CreateType(_parameterType, ctorDecl.ToTreeNode());
             if (!type.IsResolved)
             {
                 var interfaceDecl = factory.CreateTypeMemberDeclaration("public interface IFoo {}");
+                if (interfaceDecl == null)
+                    return false;
                 interfaceDecl.SetName(type.GetPresentableName(CSharpLanguageService.CSHARP));
                 interfaceDecl.LanguageService.CodeFormatter.Format(interfaceDecl.ToTreeNode(), CodeFormatProfile.GENERATOR);
-                var containingTypeDecl = ctor.GetContainingType().GetDeclarations().First();
+                var containingType = ctor.GetContainingType();
+                if (containingType == null)
+                    return false;
+                var containingTypeDecl = containingType.GetDeclarations().First();
                 ModificationUtil.AddChildBefore(containingTypeDecl.ToTreeNode(), interfaceDecl.ToTreeNode());
             }
-            type = CSharpTypeFactory.CreateType(_model.NewParameterType, ctorDecl.ToTreeNode());
+            type = CSharpTypeFactory.CreateType(_parameterType, ctorDecl.ToTreeNode());
             var naming = PsiManager.GetInstance(_solution).Naming;
             var suggestionOptions = new SuggestionOptions();
             var recommendedName = naming.Suggestion.GetDerivedName(
@@ -70,6 +85,8 @@ namespace ResharperPlugin
             var parametersOwner = ctorDecl as ICSharpParametersOwnerDeclaration;
             var references = FindReferences(parametersOwner, progressIndicator);
 
+            if (parametersOwner == null)
+                return false;
             parametersOwner.AddParameterDeclarationAfter(
                 ParameterKind.VALUE, type, recommendedName,
                 parametersOwner.ParameterDeclarations.LastOrDefault());
@@ -80,9 +97,11 @@ namespace ResharperPlugin
             return true;
         }
 
-        private void ChangeReference(IArgumentsOwner reference, string recommendedName, IType type)
+        private static void ChangeReference(IArgumentsOwner reference, string recommendedName, IType type)
         {
             var csharpOwner = reference as ICSharpArgumentsOwner;
+            if (csharpOwner == null || type.Module == null)
+                return;
             var factory = CSharpElementFactory.GetInstance(type.Module);
             var inField = false;
             if (csharpOwner.GetContainingElement<IFieldDeclaration>(false) != null)
@@ -93,7 +112,7 @@ namespace ResharperPlugin
                 csharpOwner.Arguments.LastOrDefault());
         }
 
-        private List<IArgumentsOwner> FindReferences(ICSharpParametersOwnerDeclaration parametersOwner, IProgressIndicator progressIndicator)
+        private static IEnumerable<IArgumentsOwner> FindReferences(ICSharpParametersOwnerDeclaration parametersOwner, IProgressIndicator progressIndicator)
         {
             var references = new List<IArgumentsOwner>();
             var consumer = new FindResultConsumer(
@@ -130,8 +149,9 @@ namespace ResharperPlugin
         public bool Initialize(IDataContext context)
         {
             _solution = context.GetData(JetBrains.IDE.DataConstants.SOLUTION);
-            _model = new AddDependencyModel();
-            _page = new AddDependencyPage(_model, context.GetData(JetBrains.IDE.DataConstants.SOLUTION));
+            _page = new AddDependencyPage(
+                s => _parameterType = s, 
+                context.GetData(JetBrains.IDE.DataConstants.SOLUTION));
             var @class = GetClass(context);
             _class = @class.CreateElementPointer();
             var ctor = @class.Constructors.FirstOrDefault();

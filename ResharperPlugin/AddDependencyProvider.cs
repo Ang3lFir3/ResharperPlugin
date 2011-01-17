@@ -3,8 +3,12 @@ using JetBrains.ReSharper.Refactorings.Workflow;
 
 namespace ResharperPlugin
 {
+    public interface IAddDependencyWorkflowProvider : IRefactoringWorkflowProvider
+    {
+    }
+    
     [RefactoringWorkflowProvider(typeof(IAddDependencyWorkflowProvider))]
-    public class AddDependencyProvider: IAddDependencyWorkflowProvider, IRefactoringWorkflowProvider
+    public class AddDependencyProvider: IAddDependencyWorkflowProvider
     {
         public IRefactoringWorkflow CreateWorkflow(ISolution solution)
         {

@@ -126,15 +126,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AddDependencyAction.cs" />
-    <Compile Include="AddDependencyConflictSearcher.cs" />
-    <Compile Include="AddDependencyModel.cs" />
     <Compile Include="AddDependencyPage.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="AddDependencyProvider.cs" />
     <Compile Include="AddDependencyRefactoringWorkflow.cs" />
     <Compile Include="CreateStubFromUsageFix.cs" />
-    <Compile Include="IAddDependencyWorkflowProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
