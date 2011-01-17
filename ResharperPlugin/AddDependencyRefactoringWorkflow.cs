@@ -62,6 +62,8 @@ namespace ResharperPlugin
                 return false;
             var type = CSharpTypeFactory.CreateType(_parameterType, ctorDecl.ToTreeNode());
             if (!type.IsResolved)
+                type = CSharpTypeFactory.CreateType(_parameterType, ctorDecl.GetPsiModule());
+            if (!type.IsResolved)
             {
                 var interfaceDecl = factory.CreateTypeMemberDeclaration("public interface IFoo {}");
                 if (interfaceDecl == null)
