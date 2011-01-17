@@ -43,7 +43,7 @@ namespace ResharperPlugin
             var ctorDecl = ctor.GetDeclarations().FirstOrDefault();
             if (ctorDecl == null)
             {
-                var typeDecl = definingClass.GetDeclarations().First() as IClassLikeDeclarationNode;
+                var typeDecl = definingClass.GetDeclarations().FirstOrDefault() as IClassLikeDeclarationNode;
                 if (typeDecl == null)
                     return false;
                 var typeBody = typeDecl.Body;
