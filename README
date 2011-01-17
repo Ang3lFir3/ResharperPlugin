@@ -5,4 +5,56 @@ as far as I'm concerned, on this code is non-existent.  I don't care what you do
 with this code.  If you want to tell me what you did, if you fork it, I'd definitely 
 appreciate any tips you have, etc., but you are not required to tell me anything.
 
+Ok... Here's a short description of what it currently does.
+First, the problem we had.  When Chris Bilson and I work together, we often find
+ourselves creating new services (we're working on a very service-rich application
+due to the amount of 'integration' it does), and as we're writing these services
+we start out stupid simple with no dependencies.  Then, we write a test, and in the
+process of trying to write the test setup, we need to introduce dependencies that we
+are going to stub for the service test.  
+
+For instance, we start with:
+
+[TestFixture]
+public class when_reading_a_head
+{
+    [Test]
+    public void it_reads_the_data_from_table_storage()
+    {
+        var tableStorageHead = new TableStorageHead();
+        var headReader = new HeadReader();
+        
+        Assert.That(headReader.ReadHead("someid"), Is.SameAs(tableStorageHead));
+    }
+}
+
+then, we want to stub ITableStorageService (which in our case wouldn't typically exist
+yet, since we typically work from the top down when building our tests), so we need to 
+    1) add a parameter to HeadReader of type ITableStorageService
+    2) create an interface 'near' HeadReader of type ITableStorageService (actually we 
+        want it elsewhere, but we normally start in the same file as HeadReader)
+    3) modify all existing usages of HeadReader's constructor (none yet) to include this
+        argument.
+
+So, I've created an 'Add Dependency...' refactoring (Ctrl-Shift-R) on a class or ctor 
+call reference that allows you to type the name of an interface to add as a dependency
+to your class.  You go to HeadReader (in the "var headReader..." line), press Ctrl-Shift-R
+and choose "Add Dependency...".  In the dialog, you type ITableStorageService.  If this
+interface already exists, the combobox should find it, if not, my addin will create that
+interface next to HeadReader's declaration in the sources.  It will also add that argument
+to all call sites, putting 'TODO' if the call site is a field initializer (bad programmer!)
+or a 'natural' name if it's a normal in-block usage.
+
+That's the first problem we had to solve and our solution to it.  The second problem is that 
+when you add a parameter like this, we want to stub the interface in places where the
+dependency is required in tests.  By using the 'natural' name for the interface argument
+everywhere it is required, we can then use our QuickFix for 'Introduce RhinoMocks stub' which
+is also in this addin.  For this QuickFix, the context is a variable reference to an 
+undefined variable in a call to a method.  Similar to the place where you'd see 
+"Introduce variable" you'll see our QuickFix.  Using the quickfix will introduce a 
+line "var fooBar = MockRepository.GenerateStub<IFooBar>();" if IFooBar is the inferred type
+of the argument you're declaring a member for.
+
+This is our typical workflow so it works well for us.  YMMV.
+
 Kelly
