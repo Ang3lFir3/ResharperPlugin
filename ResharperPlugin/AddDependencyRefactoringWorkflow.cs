@@ -63,12 +63,27 @@ namespace ResharperPlugin
             var type = CSharpTypeFactory.CreateType(_parameterType, ctorDecl.ToTreeNode());
             if (!type.IsResolved)
                 type = CSharpTypeFactory.CreateType(_parameterType, ctorDecl.GetPsiModule());
+            string recommendedName = null;
+            var naming = PsiManager.GetInstance(_solution).Naming;
             if (!type.IsResolved)
             {
+                var presentableName = type.GetPresentableName(CSharpLanguageService.CSHARP);
+                var indexOfGeneric = presentableName.IndexOf('<');
+                if(indexOfGeneric != -1)
+                {
+                    var interfaceName = presentableName.Substring(1, indexOfGeneric - 1);
+                    var genericArgument = presentableName.Substring(indexOfGeneric).Trim('<', '>');
+                    recommendedName = naming.Suggestion.GetDerivedName(
+                        genericArgument + interfaceName,
+                        NamedElementKinds.Parameters,
+                        ScopeKind.Common,
+                        CSharpLanguageService.CSHARP,
+                        new SuggestionOptions());
+                }
                 var interfaceDecl = factory.CreateTypeMemberDeclaration("public interface IFoo {}");
                 if (interfaceDecl == null)
                     return false;
-                interfaceDecl.SetName(type.GetPresentableName(CSharpLanguageService.CSHARP));
+                interfaceDecl.SetName(presentableName);
                 interfaceDecl.LanguageService.CodeFormatter.Format(interfaceDecl.ToTreeNode(), CodeFormatProfile.GENERATOR);
                 var containingType = ctor.GetContainingType();
                 if (containingType == null)
@@ -77,13 +92,14 @@ namespace ResharperPlugin
                 ModificationUtil.AddChildBefore(containingTypeDecl.ToTreeNode(), interfaceDecl.ToTreeNode());
             }
             type = CSharpTypeFactory.CreateType(_parameterType, ctorDecl.ToTreeNode());
-            var naming = PsiManager.GetInstance(_solution).Naming;
-            var suggestionOptions = new SuggestionOptions();
-            var recommendedName = naming.Suggestion.GetDerivedName(
-                type.GetPresentableName(CSharpLanguageService.CSHARP), 
-                NamedElementKinds.Parameters, ScopeKind.Common,
-                CSharpLanguageService.CSHARP, suggestionOptions);
-
+            if (recommendedName == null)
+            {
+                var suggestionOptions = new SuggestionOptions();
+                recommendedName = naming.Suggestion.GetDerivedName(
+                    type.GetPresentableName(CSharpLanguageService.CSHARP),
+                    NamedElementKinds.Parameters, ScopeKind.Common,
+                    CSharpLanguageService.CSHARP, suggestionOptions);
+            }
             var parametersOwner = ctorDecl as ICSharpParametersOwnerDeclaration;
             var references = FindReferences(parametersOwner, progressIndicator);
 
