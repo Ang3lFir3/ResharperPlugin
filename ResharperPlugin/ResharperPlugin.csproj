@@ -134,6 +134,7 @@
     <Compile Include="AddDependencyProvider.cs" />
     <Compile Include="AddDependencyRefactoringWorkflow.cs" />
     <Compile Include="AddRhinoArgToArgumentContextAction.cs" />
+    <Compile Include="ChangeCallToStubContextAction.cs" />
     <Compile Include="CreateStubFromUsageFix.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
